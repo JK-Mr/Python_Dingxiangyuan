@@ -31,14 +31,20 @@ def get(url):
 def html_content(html_content):
     json_load = json.loads(str(html_content))
     pcArticleVOS = json_load['data']['pcArticleVOS']
-    for a in pcArticleVOS:
-        print(str(a['link']))
-        with open(a['link'] + '.json', 'w') as f:
-            f.write(json.dumps(ensure_ascii=False).decode('utf8'))
-            f.close()
+    if len(pcArticleVOS):
+        for url in pcArticleVOS:
+            print(url['link'])
+
+            # html = get(str('http://'+url['link']))
+            # print(html.text)
+    else:
+        print('无数据！')
+
 
 
 if __name__ == "__main__":
-    html = get(str('https://v2.sohu.com/author-page-api/author-articles/pc/104952?pNo=') + str(1))
-    html_content(html.text)
+    for i in range(1, 55):
+        print('爬取第%d页' % i)
+        html = get(str('https://v2.sohu.com/author-page-api/author-articles/pc/104952?pNo=') + str(i))
+        html_content(html.text)
     print("OK")
