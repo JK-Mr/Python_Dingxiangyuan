@@ -16,7 +16,6 @@ import redis
 import uuid
 import time
 
-import requests
 import urllib3
 
 file_path = 'E:/ceshi/'
