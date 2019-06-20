@@ -44,8 +44,8 @@ def build_json(pub_time, uid, title, url_link, source, main_content, keywords):
 
     write_file(resources, uid)
 
-    rds14.sadd('xinlang:news_ok_urls', url_link)
-    rds14.set('xinlang:' + uid, 'ok')
+    # rds14.sadd('xinlang:news_ok_urls', url_link)
+    # rds14.set('xinlang:' + uid, 'ok')
 
     return resources
 
