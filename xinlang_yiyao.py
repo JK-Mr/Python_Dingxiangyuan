@@ -1,5 +1,3 @@
-# -*- coding: utf-8 -*-
-
 """
 @author: Jiang Ke
 @license: Apache Licence 
@@ -18,26 +16,36 @@ import redis
 import uuid
 import time
 
+import requests
+import urllib3
 
-# file_path = 'F:\xinlang_yiyao/'
+file_path = 'E:/ceshi/'
+
+pool14 = redis.ConnectionPool(host='47.104.101.207', port=6379, decode_responses=True, db=14, password='Pa88####')
+# pool11 = redis.ConnectionPool(host='47.104.101.207', port=6379, decode_responses=True, db=14, password='Pa88####')
+# rds11 = redis.Redis(connection_pool=pool11)
+rds14 = redis.Redis(connection_pool=pool14)
 
 
 # json文件的格式
-def build_json(pub_time, uid, title, url_link, main_content, keywords):
+def build_json(pub_time, uid, title, url_link, source, main_content, keywords):
     resources = {}
     resources['pub_time'] = pub_time
     resources['uuid'] = uid
     resources['title'] = title
     resources['url'] = url_link
-    resources['web_source'] = "搜狐健康"
-    resources['source'] = "搜狐健康"
+    resources['web_source'] = "新浪医药新闻"
+    resources['source'] = source  # 网页获取
     resources['en_type'] = "news"
     resources['article_content'] = main_content
     resources['keywords'] = keywords
     resources['type'] = "新闻资讯"
-    resources['pub_person'] = "搜狐健康"
+    resources['pub_person'] = "新浪医药新闻"
 
-    # write_file(resources, uid)
+    write_file(resources, uid)
+
+    rds14.sadd('xinlang:news_ok_urls', url_link)
+    rds14.set('xinlang:' + uid, 'ok')
 
     return resources
 
@@ -50,10 +58,10 @@ def get_uuid(string):
 
 
 # 写成json文件
-# def write_file(resources, fileName):
-#     with open(file_path + fileName + '.json', 'w', encoding='UTF-8') as f:
-#         f.write(json.dumps(resources, ensure_ascii=False))
-#         f.close()
+def write_file(resources, fileName):
+    with open(file_path + fileName + '.json', 'w', encoding='UTF-8') as f:
+        f.write(json.dumps(resources, ensure_ascii=False))
+        f.close()
 
 
 # 去掉回车
@@ -73,16 +81,24 @@ def generate_second():
 
 # 请求
 def get_html_resp(url):
-    print(url)
     headers = {
         'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_11_2) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/71.0.3578.98 Safari/537.36'}
-    response = requests.get(url=url,headers=headers,verify=False)
+    urllib3.disable_warnings()
+    response = requests.get(url=url, headers=headers, verify=False)
     return response
 
 
 # 获取所需内容
 def get_url_links(html):
-    print(html)
+    url_links = []
+    content = html.select('li')
+    for i in content:
+        try:
+            paper_url = i.select('div[class="indextitle-text"]')[0].select('a')[0]['href']
+            url_links.append(paper_url)
+        except:
+            continue
+    return url_links
 
 
 # 根据html内容解析为soup（utf-8编码）
@@ -96,26 +112,76 @@ def get_soup(html_content):
 
 # 获取
 def parseHtml(url_link, html):
-    # 时间
-    year = html.select('div[class="article-info"]')[0].select('span')[0].text.split('-')[0]
-    month = html.select('div[class="article-info"]')[0].select('span')[0].text.split('-')[1]
-    day = html.select('div[class="article-info"]')[0].select('span')[0].text.split('-')[2].split(' ')[0]
-    pub_time = year + '-' + month + '-' + day
-    # uuid
-    uid = get_uuid(url_link)
-    # 标题
-    title = replace_rntb(html.select('div[class="text-title"]')[0].select('h1')[0].text)
-    # 主要内容
-    article_content = replace_rntb(html.select('article[class="article"]')[0].text)
-    main_content = replace_blank(article_content + '【关键词】' + html.select('meta[name="keywords"]')[0].attrs['content'])
-    # 关键词
-    keywords = html.select('meta[name="keywords"]')[0].attrs['content'].split(',')
+    try:
+        # 时间
+        date = html.select('div[class="wz-tbbox"]')[0].select('span')[1].text
+        resTime = time.strftime('%Y-%m-%d', time.strptime(date.strip(), '%a %b %d %H:%M:%S CST %Y'))
+        # uuid
+        uid = get_uuid(url_link)
+        # 标题
+        title = replace_rntb(html.select('div[class="news"]')[0].select('h1[class="news-title"]')[0].text)
+        # 关键词
+        keywords = html.select('meta[name="keywords"]')[0].attrs['content'].split()
+        # 主要内容
+        article_content = replace_rntb(html.select('div[class="textbox"]')[0].text)
+        main_content = replace_blank(article_content + '【关键词】' + str(keywords))
+        # 来源
+        source = replace_blank(html.select('span[class="wz-zuthorname"]')[0].select('em')[0].text.strip())
 
-    build_json(pub_time, uid, title, url_link, main_content, keywords)
+        print(url_link + '有来源数据！')
+        json = build_json(resTime, uid, title, url_link, source, main_content, keywords)
+    except:
+        try:
+            date = html.select('div[class="wz-tbbox"]')[0].select('span')[0].text
+            resTime = time.strftime('%Y-%m-%d', time.strptime(date.strip(), '%a %b %d %H:%M:%S CST %Y'))
+            # uuid
+            uid = get_uuid(url_link)
+            # 标题
+            title = replace_rntb(html.select('div[class="news"]')[0].select('h1[class="news-title"]')[0].text)
+            # 关键词
+            keywords = html.select('meta[name="keywords"]')[0].attrs['content'].split()
+            # 主要内容
+            article_content = replace_rntb(html.select('div[class="textbox"]')[0].text)
+            main_content = replace_blank(article_content + '【关键词】' + str(keywords))
+            # 来源
+            source = '新浪医药新闻'
+
+            print(url_link + '无来源数据！')
+            json = build_json(resTime, uid, title, url_link, source, main_content, keywords)
+        except:
+
+            # 时间
+            date = html.select('div[class="wz-tbbox"]')[0].select('span')[1].text
+            resTime = time.strftime('%Y-%m-%d', time.strptime(date.strip(), '%a %b %d %H:%M:%S CST %Y'))
+            # uuid
+            uid = get_uuid(url_link)
+            # 标题
+            title = replace_rntb(html.select('div[class="news"]')[0].select('h1[class="news-title"]')[0].text)
+            # 关键词
+            keywords = html.select('meta[name="keywords"]')[0].attrs['content'].split()
+            # 主要内容
+            article_content = replace_rntb(html.select('div[class="textbox"]')[0].text)
+            main_content = replace_blank(article_content + '【关键词】' + str(keywords))
+            # 来源
+            source = replace_blank(
+                html.select('span[class="wz-zuthorname margin-l50"]')[0].select('em')[0].select('a')[0].text.strip())
+
+            print(url_link + '原创数据！')
+            json = build_json(resTime, uid, title, url_link, source, main_content, keywords)
 
 
 if __name__ == "__main__":
-    html = get_html_resp(str('https://med.sina.com/article_list_-1_1_' + str(1) + '_3509.html'))
-    # get_url_links(html.text)
-
+    for i in range(1, 3509):
+        print('第%d页' % i)
+        html = get_html_resp(str('https://med.sina.com/article_list_-1_1_' + str(1) + '_3509.html'))
+        url_links = get_url_links(get_soup(html.text))
+        if not (url_links is None):
+            for url_link in url_links:
+                print(url_link)
+                try:
+                    time.sleep(generate_second())
+                    html = get_html_resp(str(url_link))
+                    parseHtml(url_link, get_soup(html.text))
+                except:
+                    continue
     print("OK")
