@@ -18,7 +18,8 @@ import redis
 import uuid
 import time
 
-file_path = 'F:\souhu_jiankang/'
+file_path = 'F:/souhu_jiankang/'
+
 pool14 = redis.ConnectionPool(host='47.104.101.207', port=6379, decode_responses=True, db=14, password='Pa88####')
 # pool11 = redis.ConnectionPool(host='47.104.101.207', port=6379, decode_responses=True, db=14, password='Pa88####')
 # rds11 = redis.Redis(connection_pool=pool11)

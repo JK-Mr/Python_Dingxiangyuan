@@ -18,7 +18,7 @@ import time
 
 import urllib3
 
-file_path = 'E:/ceshi/'
+file_path = 'F:/lang_yiyao/'
 
 pool14 = redis.ConnectionPool(host='47.104.101.207', port=6379, decode_responses=True, db=14, password='Pa88####')
 # pool11 = redis.ConnectionPool(host='47.104.101.207', port=6379, decode_responses=True, db=14, password='Pa88####')
