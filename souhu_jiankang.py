@@ -21,8 +21,8 @@ import time
 file_path = 'F:\souhu_jiankang/'
 pool14 = redis.ConnectionPool(host='47.104.101.207', port=6379, decode_responses=True, db=14, password='Pa88####')
 # pool11 = redis.ConnectionPool(host='47.104.101.207', port=6379, decode_responses=True, db=14, password='Pa88####')
-rds14 = redis.Redis(connection_pool=pool14)
 # rds11 = redis.Redis(connection_pool=pool11)
+rds14 = redis.Redis(connection_pool=pool14)
 
 
 # json文件的格式
@@ -111,22 +111,26 @@ def get_soup(html_content):
 
 # 获取
 def parseHtml(url_link, html):
-    # 时间
-    year = html.select('div[class="article-info"]')[0].select('span')[0].text.split('-')[0]
-    month = html.select('div[class="article-info"]')[0].select('span')[0].text.split('-')[1]
-    day = html.select('div[class="article-info"]')[0].select('span')[0].text.split('-')[2].split(' ')[0]
-    pub_time = year + '-' + month + '-' + day
-    # uuid
-    uid = get_uuid(url_link)
-    # 标题
-    title = replace_rntb(html.select('div[class="text-title"]')[0].select('h1')[0].text)
-    # 主要内容
-    article_content = replace_rntb(html.select('article[class="article"]')[0].text)
-    main_content = replace_blank(article_content + '【关键词】' + html.select('meta[name="keywords"]')[0].attrs['content'])
-    # 关键词
-    keywords = html.select('meta[name="keywords"]')[0].attrs['content'].split(',')
+    try:
+        # 时间
+        year = html.select('div[class="article-info"]')[0].select('span')[0].text.split('-')[0]
+        month = html.select('div[class="article-info"]')[0].select('span')[0].text.split('-')[1]
+        day = html.select('div[class="article-info"]')[0].select('span')[0].text.split('-')[2].split(' ')[0]
+        pub_time = year + '-' + month + '-' + day
+        # uuid
+        uid = get_uuid(url_link)
+        # 标题
+        title = replace_rntb(html.select('div[class="text-title"]')[0].select('h1')[0].text)
+        # 主要内容
+        article_content = replace_rntb(html.select('article[class="article"]')[0].text)
+        main_content = replace_blank(
+            article_content + '【关键词】' + html.select('meta[name="keywords"]')[0].attrs['content'])
+        # 关键词
+        keywords = html.select('meta[name="keywords"]')[0].attrs['content'].split(',')
 
-    build_json(pub_time, uid, title, url_link, main_content, keywords)
+        build_json(pub_time, uid, title, url_link, main_content, keywords)
+    except:
+        return print('错误' + url_link)
 
 
 if __name__ == "__main__":
@@ -136,8 +140,11 @@ if __name__ == "__main__":
         url_links = get_url_links(html.text)
         if not (url_links is None):
             for url_link in get_url_links(html.text):
-                time.sleep(generate_second())
                 print(url_link)
-                html = get_html_resp(str(url_link))
-                parseHtml(url_link, get_soup(html.text))
+                try:
+                    time.sleep(generate_second())
+                    html = get_html_resp(str(url_link))
+                    parseHtml(url_link, get_soup(html.text))
+                except:
+                    continue
     print("OK")
