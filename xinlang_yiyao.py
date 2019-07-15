@@ -58,6 +58,7 @@ def get_uuid(string):
 
 # 写成json文件
 def write_file(resources, fileName):
+    print(fileName)
     with open(file_path + fileName + '.json', 'w', encoding='UTF-8') as f:
         f.write(json.dumps(resources, ensure_ascii=False))
         f.close()
@@ -176,11 +177,9 @@ if __name__ == "__main__":
         url_links = get_url_links(get_soup(html.text))
         if not (url_links is None):
             for url_link in url_links:
-                print(url_link)
                 try:
                     time.sleep(generate_second())
                     html = get_html_resp(str(url_link))
                     parseHtml(url_link, get_soup(html.text))
                 except:
                     continue
-    print("OK")
