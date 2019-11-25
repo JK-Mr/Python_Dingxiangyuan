@@ -9,6 +9,7 @@
 """
 
 import requests
+from bs4 import BeautifulSoup
 
 
 # 请求页面
@@ -20,14 +21,28 @@ def get_html_resp(url):
     return response
 
 
+# 根据html内容解析为soup（utf-8编码）
+def get_soup(html_content):
+    soup = BeautifulSoup(html_content, 'html.parser')
+    if soup is None:
+        soup = get_soup(html_content)
+    return soup
+
+
 # 获取所需内容
 def get_url_links(html_content):
-    print(html_content)
-    # content = html_content.select('div[class="x_wrap1 fl"]')
-    # print(content)
+    url_links = []
+    content = html_content.select('div[class="x_wrap1 fl"]')[0]
+    for a in content:
+        print(a.select('a'))
+        # try:
+        #     paper_url = a.select('a')[0]['href']
+        #     url_links.append(paper_url)
+        # except:
+        #     continue
 
 
 
 if __name__ == "__main__":
     html = get_html_resp(str('http://heart.dxy.cn/tag/news/p-1'))
-    get_url_links(html.text)
+    get_url_links(get_soup(html.text))
